@@ -68,6 +68,13 @@ limitations under the License.
       disabled="true">Play</button>
   </fieldset>
 
+  <fieldset class="panel">
+    <legend>MIDI-Player</legend>
+    <button id="midiButton" onclick="bleInstance.requestSetChannelGainUpdate(0, 0, 27);">
+    Test Tactor 1
+    </button>
+  </fieldset>
+
   <fieldset class="panel panel-clear">
     <legend>Log</legend>
     <textarea id="logDisplay" rows="20" cols="105" readonly="true">
@@ -77,6 +84,9 @@ limitations under the License.
 <script src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.34.0/smoothie.js">
 </script>
 <script src="./ble_library.js"></script>
+
+<script src="midi.js"></script>
+
 <script>
   var logDisplay = document.getElementById('logDisplay');
   var logLines = [];
@@ -359,7 +369,7 @@ limitations under the License.
       testButton.class = 'channelTest';
       testButton.id = 'channelTest' + c;
       testButton.value = 'Test';
-
+      
       var tr = table.insertRow();  // Add a table row for this knob.
       tr.insertCell().appendChild(label);
       tr.insertCell().appendChild(checkbox);
@@ -371,6 +381,7 @@ limitations under the License.
       td.className = 'knobUnits';  // Add units after the text display.
       td.innerHTML = 'dB';
       tr.insertCell().appendChild(testButton);
+      
 
       ((c, source, slider, gainText, checkbox, testButton) => {
         source.addEventListener('change', function () {
@@ -396,6 +407,7 @@ limitations under the License.
         testButton.addEventListener('click', function () {
           bleInstance.requestSetChannelGainUpdate(c, c);
         }, false);
+        
       })(c, source, slider, gainText, checkbox, testButton);
     }
 

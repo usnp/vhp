@@ -452,8 +452,8 @@ class BleManager {
     for (let i = 0; i < messagePayload.byteLength; i++) {
       messagePayload[i] = bytes.getUint8(4 + i);
     }
-    this.log('Got type: ' + messageType + ', [' +
-      messagePayload.join(', ') + ']');
+    //this.log('Got type: ' + messageType + ', [' +
+    //  messagePayload.join(', ') + ']');
     switch (messageType) {
       case MESSAGE_TYPE_TUNING:
         if (messagePayload.byteLength == this.tuningKnobs.length) {
@@ -629,6 +629,7 @@ class BleManager {
     let i = 1;
     if (testChannels.length) {
       let testChannelData0 = this.channelData[testChannels[0]].source - 1;
+      console.log(testChannels);
       let testChannelData1 = this.channelData[testChannels[1]].source - 1;
       messagePayload[i] = (testChannelData0 & 15) | testChannelData1 << 4;
       i++;
@@ -656,6 +657,9 @@ class BleManager {
       messagePayload[i + 1] = (pack24 >> 8) & 255;
       messagePayload[i + 2] = (pack24 >> 16) & 255;
     }
+    //messagePayload = [170, 153, 255, 255, 255, 255, 255, 3, 255, 15, 0]
+    //messagePayload = [OxAA, 0x99, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x03, 255, 0x0F, 0x00]
+   // messagePayload = [AA, 99, FF, FF, FF, FF, FF, 03, 255, 0F, 00]
     this.writeMessage(messageType, messagePayload);
   }
 
@@ -686,5 +690,6 @@ class BleManager {
     bytes[1] = sum2 % 255;
     this.nusRx.writeValue(bytes);
   }
+
 }
 
