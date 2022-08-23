@@ -23,7 +23,25 @@ limitations under the License.
 <body>
   <h1>Audio-to-Tactile BLE web client</h1>
 
+  <div id="Sam's MIDI Zone ꩜ ">
+  <fieldset class="panel">
+    <legend>MIDI CC Output (0-255)</legend>
+    <h2 id="lastMIDI">Waiting for MIDI </h2>
+    <button id="midiButton" onclick="bleInstance.requestSetChannelGainUpdate(0, 0, 27);">
+    Test Tactor 1
+    </button>
+
+    <br>
+    <br>
+  
+    <legend class="plotter-legend">MIDI Output</legend>
+    <canvas id="plotter" width="470" height="300"></canvas>
+  </fieldset>
+
+</div>
+
   <div id="connectionPanel">
+    <fieldset class="panel">
     <button id="clientConnectButton"
       onclick="bleInstance.connectionToggle()">Connect</button><br>
     <legend class="deviceNameLegend">Device name</legend>
@@ -32,17 +50,21 @@ limitations under the License.
     <button id="OtaBootloadMode" onclick="bleInstance.sendBootloadModeCommand()"
         disabled="true">Bootload mode</button>
   </div>
+  </fieldset>
 
+  <fieldset class="panel">
   <h1>Battery voltage: </h1>
   <h2 id="batteryVoltage">Waiting for battery voltage...</h2>
 
   <h1>Temperature: </h1>
   <h2 id="temperature">Waiting for temperature sensor...</h2>
-
+</fieldset>
+  
   <fieldset class="panel">
     <legend class="plot-legend">Audio input level</legend>
     <canvas id="plot" width="470" height="300"></canvas>
   </fieldset>
+  
 
   <fieldset id="tuningKnobs" class="panel">
     <legend>Tuning knobs</legend>
@@ -68,12 +90,7 @@ limitations under the License.
       disabled="true">Play</button>
   </fieldset>
 
-  <fieldset class="panel">
-    <legend>MIDI-Player</legend>
-    <button id="midiButton" onclick="bleInstance.requestSetChannelGainUpdate(0, 0, 27);">
-    Test Tactor 1
-    </button>
-  </fieldset>
+
 
   <fieldset class="panel panel-clear">
     <legend>Log</legend>
@@ -81,15 +98,118 @@ limitations under the License.
     </textarea>
   </fieldset>
 
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.34.0/smoothie.js">
 </script>
 <script src="./ble_library.js"></script>
 
-<script src="midi.js"></script>
 
 <script>
+
+/*
+* Please note: this is copypasta from the Mozilla Docs for WebMIDI
+*
+*/ 
+var midi = null;  // global MIDIAccess object
+
+function onMIDISuccess( midiAccess ) {
+  console.log( "MIDI ready!" );
+  midi = midiAccess;  // store in the global (in real usage, would probably keep in an object instance)
+
+  function listInputsAndOutputs(midiAccess) {
+	for (const entry of midiAccess.inputs) {
+	  const input = entry[1];
+	  console.log(`Input port [type:'${input.type}']` +
+		` id:'${input.id}'` +
+		` manufacturer:'${input.manufacturer}'` +
+		` name:'${input.name}'` +
+		` version:'${input.version}'`);
+	}
+  
+	for (const entry of midiAccess.outputs) {
+	  const output = entry[1];
+	  console.log(`Output port [type:'${output.type}'] id:'${output.id}' manufacturer:'${output.manufacturer}' name:'${output.name}' version:'${output.version}'`);
+	}
+  }
+  
+
+  function onMIDIMessage(event) {
+	let str = `MIDI message received at timestamp ${event.timeStamp}[${event.data.length} bytes]: `;
+	for (const character of event.data) {
+	  str += `0x${character.toString(16)} `;
+	}
+	//console.log(str);
+  console.log(event.data[2]);
+  var roundtactor = Math.round(event.data[2]/4); 
+  var tactor = parseInt(roundtactor);
+  bleInstance.requestSetChannelGainUpdate(tactor, tactor, 27);
+
+  updateMIDI(tactor);
+  updateMIDIPlot(tactor);
+  }
+  
+  function startLoggingMIDIInput(midiAccess, indexOfPort) {
+	midiAccess.inputs.forEach((entry) => {entry.onmidimessage = onMIDIMessage;});
+  }
+  
+  listInputsAndOutputs(midi);
+  startLoggingMIDIInput(midi, 0);
+  
+}
+
+function onMIDIFailure(msg) {
+  console.log( "Failed to get MIDI access - " + msg );
+}
+
+  // Define smoothie chart for plotting the audio envelope.
+  var plotter = new TimeSeries();
+  const smoothies = new SmoothieChart({
+    minValue: 0.0,
+    grid: {
+      fillStyle: '#f8f8f8',
+      strokeStyle: '#bbb',
+      verticalSections: 1,
+      borderVisible: false
+    },
+    labels: {
+      fillStyle: '#000000',
+      fontSize: 16,
+      precision: 3
+    },
+    title: {
+      text: 'LIVEMIDI',
+      fillStyle: '#000000'
+    },
+    limitFPS: 60
+  });
+  smoothies.addTimeSeries(plotter, {strokeStyle: '#1f77b4', lineWidth: 2});
+  smoothies.streamTo(document.querySelector('#plotter'), 100);
+
+  /**
+   * Plot new data on the smoothie chart.
+   * @param {Float32Array} out New data points to plot.
+   */
+  function updateMIDIPlot(out) {
+    var t = new Date().getTime();
+    plotter.append(t, out);
+    t += ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS;
+  }
+
+
+navigator.requestMIDIAccess().then( onMIDISuccess, onMIDIFailure );
+
+
+
+
+/* END MIDI COPYPASTA
+*
+* 
+*/
+
+
   var logDisplay = document.getElementById('logDisplay');
   var logLines = [];
+
   /**
    * Appends a message to the log window. A newline is inserted after
    * the message.
@@ -110,6 +230,7 @@ limitations under the License.
     logDisplay.value = logLines.join('\n');
     logDisplay.scrollTop = logDisplay.scrollHeight;
   }
+
 
   // Define smoothie chart for plotting the audio envelope.
   var plot = new TimeSeries();
@@ -192,6 +313,13 @@ limitations under the License.
     // Keep two decimal points.
     element.innerHTML = parseFloat(num).toFixed(2) + " °C";
   }
+
+  function updateMIDI(num) {
+    var element = document.getElementById("lastMIDI");
+    //console.log(num);
+    element.innerHTML = (num) + " °C";
+  }
+
 
   /**
    * Updates UI elements for all channels, including source, gain, and
