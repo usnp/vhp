@@ -139,9 +139,10 @@ function onMIDISuccess( midiAccess ) {
 	  str += `0x${character.toString(16)} `;
 	}
 	//console.log(str);
-  console.log(event.data[2]);
-  var roundtactor = Math.round(event.data[2]/4); 
+  //console.log(event.data[2]);
+  var roundtactor = Math.round(event.data[2]/5);
   var tactor = parseInt(roundtactor);
+  console.log(tactor);
   bleInstance.requestSetChannelGainUpdate(tactor, tactor, 27);
 
   updateMIDI(tactor);
